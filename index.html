@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GuestReply — AI Review Replies for Hospitality</title>
+<meta name="description" content="GuestReply writes on-brand replies to guest reviews for restaurants and hotels. Built by Chloe Davis.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f4ef;
+    --surface: #ffffff;
+    --ink: #1c1a17;
+    --muted: #6b655c;
+    --line: #e6e0d6;
+    --accent: #1f5c4a;
+    --accent-soft: #e3efe9;
+    --star: #e0a526;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.6;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+  header { display: flex; justify-content: space-between; align-items: center; padding: 22px 0; }
+  .logo { font-weight: 700; font-size: 1.25rem; color: var(--ink); text-decoration: none; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  nav a { color: var(--muted); text-decoration: none; font-weight: 500; margin-left: 24px; font-size: .95rem; }
+  nav a:hover { color: var(--ink); }
+
+  .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; padding: 48px 0 88px; }
+  .eyebrow {
+    display: inline-block; background: var(--accent-soft); color: var(--accent);
+    font-weight: 600; font-size: .8rem; letter-spacing: .06em; text-transform: uppercase;
+    padding: 6px 12px; border-radius: 999px; margin-bottom: 20px;
+  }
+  h1 {
+    font-family: "Instrument Serif", serif; font-weight: 400;
+    font-size: clamp(2.6rem, 6vw, 4.2rem); line-height: 1.02; margin-bottom: 20px;
+    letter-spacing: -.01em;
+  }
+  h1 em { color: var(--accent); }
+  .lede { font-size: 1.15rem; color: var(--muted); max-width: 40ch; margin-bottom: 30px; }
+  .btn {
+    display: inline-block; background: var(--accent); color: #fff; padding: 14px 24px;
+    border-radius: 10px; font-weight: 600; text-decoration: none;
+  }
+  .btn:hover { filter: brightness(.92); }
+
+  .demo { display: grid; gap: 14px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    padding: 20px 22px; box-shadow: 0 8px 24px rgba(28,26,23,.05);
+  }
+  .card .label { font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .stars { color: var(--star); letter-spacing: 2px; }
+  .card p { font-size: .97rem; }
+  .card.reply { border-color: var(--accent); background: var(--accent-soft); }
+  .card.reply .label { color: var(--accent); }
+  .tag { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: .72rem; text-transform: none; letter-spacing: 0; color: var(--muted); }
+
+  section { padding: 80px 0; }
+  h2 { font-family: "Instrument Serif", serif; font-weight: 400; font-size: clamp(2rem, 4.5vw, 2.8rem); line-height: 1.1; margin-bottom: 14px; }
+  .intro { color: var(--muted); max-width: 62ch; font-size: 1.05rem; margin-bottom: 40px; }
+
+  .band { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .step { border-top: 2px solid var(--accent); padding-top: 18px; }
+  .step .n { font-weight: 700; color: var(--accent); font-size: .85rem; margin-bottom: 6px; }
+  .step h3 { font-size: 1.1rem; margin-bottom: 6px; }
+  .step p { color: var(--muted); font-size: .97rem; }
+
+  .who { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .who .card h3 { font-size: 1.1rem; margin-bottom: 6px; }
+  .who .card p { color: var(--muted); }
+
+  .price {
+    max-width: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 32px;
+  }
+  .price .amt { font-family: "Instrument Serif", serif; font-size: 3.2rem; line-height: 1; }
+  .price .amt small { font-family: "Inter", sans-serif; font-size: 1rem; color: var(--muted); }
+  .price ul { list-style: none; margin: 20px 0 0; }
+  .price li { padding: 8px 0; border-top: 1px solid var(--line); color: var(--muted); }
+  .price li::before { content: "✓"; color: var(--accent); font-weight: 700; margin-right: 10px; }
+
+  .founder { background: var(--ink); color: var(--bg); border-radius: 24px; padding: 40px; display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; }
+  .avatar { width: 88px; height: 88px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 1.6rem; color: #fff; }
+  .founder h2 { color: var(--bg); margin-bottom: 6px; }
+  .founder p { color: #cfc8bc; }
+
+  footer { padding: 36px 0 48px; margin-top: 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+  @media (max-width: 800px) {
+    nav { display: none; }
+    .hero { grid-template-columns: 1fr; gap: 36px; padding: 24px 0 56px; }
+    .grid3, .who { grid-template-columns: 1fr; }
+    .founder { grid-template-columns: 1fr; padding: 28px; }
+    section { padding: 56px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <a class="logo" href="#">Guest<span>Reply</span></a>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#founder">About</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div>
+      <span class="eyebrow">AI for hospitality</span>
+      <h1>Every guest review, <em>answered</em> in seconds.</h1>
+      <p class="lede">GuestReply uses AI to write thoughtful, on-brand replies to your Google, Yelp and TripAdvisor reviews, so restaurants and hotels can respond to every guest without spending hours on it.</p>
+      <a class="btn" href="#how">See how it works</a>
+    </div>
+
+    <div class="demo" aria-label="Example of a review and a GuestReply response">
+      <div class="card">
+        <div class="label"><span>Example guest review</span><span class="stars">★★☆☆☆</span></div>
+        <p>"Food was great but we waited 40 minutes for our table even with a reservation. Not what we expected for a Friday date night."</p>
+      </div>
+      <div class="card reply">
+        <div class="label"><span>GuestReply draft</span><span class="tag">Tone: warm</span></div>
+        <p>Thank you for sharing this, and we're so sorry your date night started with a long wait. A reservation should mean your table is ready, and we fell short on Friday. We're glad the food made up for some of it, and we'd love to welcome you back for a smoother evening. Please reach out to us directly so we can make it right.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="band" id="how">
+  <div class="wrap">
+    <h2>What GuestReply does</h2>
+    <p class="intro">Responding to reviews builds trust with future guests, but most owners and managers don't have time to write a careful reply to every one. GuestReply is a web app that reads a guest review and drafts a professional response in your business's voice. You review it, tweak it if you want, and post it.</p>
+    <div class="grid3">
+      <div class="step">
+        <div class="n">STEP 1</div>
+        <h3>Paste a review</h3>
+        <p>Copy any guest review, positive or negative, into GuestReply.</p>
+      </div>
+      <div class="step">
+        <div class="n">STEP 2</div>
+        <h3>Pick your tone</h3>
+        <p>Warm, professional or upbeat. GuestReply matches your brand's voice.</p>
+      </div>
+      <div class="step">
+        <div class="n">STEP 3</div>
+        <h3>Get a ready reply</h3>
+        <p>AI drafts a thoughtful response that addresses what the guest said.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Built for hospitality teams</h2>
+    <p class="intro">Made for the people who care about guest experience but are short on time.</p>
+    <div class="who">
+      <div class="card">
+        <h3>Restaurants &amp; cafés</h3>
+        <p>Owners and general managers who want every Yelp and Google review answered, not just the bad ones.</p>
+      </div>
+      <div class="card">
+        <h3>Hotels &amp; B&amp;Bs</h3>
+        <p>Front-office and guest-relations teams handling a steady stream of TripAdvisor and booking-site reviews.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="pricing">
+  <div class="wrap">
+    <h2>Simple pricing</h2>
+    <p class="intro">One plan for small hospitality businesses.</p>
+    <div class="price">
+      <div class="amt">$15 <small>/ month</small></div>
+      <ul>
+        <li>Unlimited review replies</li>
+        <li>Choose your brand tone</li>
+        <li>Save and reuse past replies</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="founder">
+  <div class="wrap">
+    <div class="founder">
+      <div class="avatar">CD</div>
+      <div>
+        <h2>Built by Chloe Davis</h2>
+        <p>Hi, I'm Chloe Davis. I'm building GuestReply to help restaurants and hotels keep up with guest reviews, so they can spend less time typing and more time taking care of guests.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <footer>
+    <span>© 2026 GuestReply · Chloe Davis</span>
+    <span>HM 480 · Week 1: First Deploy</span>
+  </footer>
+</div>
+
+</body>
+</html>
