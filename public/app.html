@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard — GuestReply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="logo" href="/">Guest<span>Reply</span></a>
+    <nav class="nav">
+      <span class="muted hide-sm" id="who"></span>
+      <button class="btn small ghost" id="logout">Log out</button>
+    </nav>
+  </header>
+
+  <div class="plan" id="plan" hidden></div>
+  <div class="msg" id="banner"></div>
+
+  <div class="app-grid">
+    <!-- Left: saved business profile -->
+    <aside class="panel">
+      <h2>Your business</h2>
+      <p class="muted">Saved once, used in every reply.</p>
+      <form id="profile">
+        <label for="business_name">Business name</label>
+        <input id="business_name" name="business_name" placeholder="The Corner Bistro">
+        <label for="business_type">Type</label>
+        <select id="business_type" name="business_type">
+          <option>Restaurant</option><option>Café</option><option>Bar</option>
+          <option>Hotel</option><option>B&amp;B / Inn</option><option>Other hospitality</option>
+        </select>
+        <label for="tone">Tone of voice</label>
+        <select id="tone" name="tone">
+          <option>Warm and friendly</option><option>Polished and professional</option>
+          <option>Upbeat and casual</option><option>Short and to the point</option>
+        </select>
+        <label for="details">Details the AI should know</label>
+        <textarea id="details" name="details" placeholder="Menu highlights, hours, policies, what makes you special…"></textarea>
+        <p class="hint">The AI only uses facts you give it here. It won't invent discounts or policies.</p>
+        <label for="signoff">Sign replies as</label>
+        <input id="signoff" name="signoff" placeholder="Maria, General Manager">
+        <div class="form-actions"><button class="btn" type="submit">Save profile</button></div>
+        <div class="msg" id="profileMsg"></div>
+      </form>
+    </aside>
+
+    <!-- Right: reviews, replies, patterns -->
+    <main>
+      <div class="panel">
+        <h2>Reply to reviews</h2>
+        <p class="muted">Paste each guest review in its own box, up to 10 at a time.</p>
+        <form id="reviews">
+          <div id="boxes"></div>
+          <div class="form-actions">
+            <button class="btn ghost small" type="button" id="addBox">+ Add another review</button>
+            <button class="btn" type="submit" id="generate">Write replies</button>
+          </div>
+          <div class="msg" id="reviewMsg"></div>
+        </form>
+        <div id="results"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Pattern report</h2>
+        <p class="muted">Reads your recent reviews and shows what guests mention most, with a fix for each problem.</p>
+        <div class="form-actions"><button class="btn" id="insightsBtn">Find patterns</button></div>
+        <div class="msg" id="insightsMsg"></div>
+        <div id="insights"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Past replies</h2>
+        <div id="history"><p class="muted">Nothing yet.</p></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let me = null;
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function show(el, text, kind) {
+  el.textContent = text; el.className = "msg show " + (kind || "error");
+}
+function hide(el) { el.className = "msg"; }
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { "Content-Type": "application/json" } });
+  const data = await r.json().catch(() => ({}));
+  if (r.status === 401) { location.href = "/login"; throw new Error("Please log in."); }
+  if (!r.ok) { const e = new Error(data.error || "Something went wrong."); e.needsUpgrade = data.needsUpgrade; throw e; }
+  return data;
+}
+function busy(btn, on, label) {
+  if (on) { btn.dataset.label = btn.textContent; btn.innerHTML = '<span class="spinner"></span>' + label; btn.disabled = true; }
+  else { btn.textContent = btn.dataset.label; btn.disabled = false; }
+}
+
+function renderPlan() {
+  const p = $("plan"); p.hidden = false;
+  if (me.user.is_paid) {
+    p.innerHTML = "<span><strong>GuestReply Pro</strong> · unlimited replies and pattern reports</span>";
+  } else {
+    const left = Math.max(0, me.freeLimit - me.used);
+    p.innerHTML = `<span><strong>Free plan</strong> · ${left} of ${me.freeLimit} free replies left</span>
+      <button class="btn small" id="upgrade">Upgrade to Pro · $15/month</button>`;
+    $("upgrade").onclick = upgrade;
+  }
+}
+
+async function upgrade() {
+  const btn = $("upgrade");
+  busy(btn, true, "Opening checkout…");
+  try { const { url } = await api("/api/checkout", { method: "POST" }); location.href = url; }
+  catch (e) { busy(btn, false); show($("banner"), e.message); }
+}
+
+function addBox(value = "") {
+  if ($("boxes").children.length >= 10) return;
+  const t = document.createElement("textarea");
+  t.placeholder = `Review ${$("boxes").children.length + 1}: paste the guest's review here…`;
+  t.value = value; t.style.marginTop = "12px";
+  $("boxes").appendChild(t);
+  $("addBox").disabled = $("boxes").children.length >= 10;
+}
+
+function resultHtml(r) {
+  return `<div class="result">
+    <div class="review">“${esc(r.review)}”</div>
+    <div class="reply">${esc(r.reply)}</div>
+    <div class="row"><button class="btn small ghost" data-copy="${esc(r.reply)}">Copy reply</button></div>
+  </div>`;
+}
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-copy]");
+  if (!b) return;
+  try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = "Copied ✓"; }
+  catch { b.textContent = "Select and copy manually"; }
+  setTimeout(() => (b.textContent = "Copy reply"), 2000);
+});
+
+async function loadHistory() {
+  const { history } = await api("/api/replies");
+  $("history").innerHTML = history.length ? history.map(resultHtml).join("") : '<p class="muted">Nothing yet.</p>';
+}
+
+async function load() {
+  me = await api("/api/me");
+  $("who").textContent = me.user.name || me.user.email;
+  const p = me.profile || {};
+  for (const k of ["business_name", "business_type", "tone", "details", "signoff"]) if (p[k]) $(k).value = p[k];
+  renderPlan();
+  loadHistory();
+  const q = new URLSearchParams(location.search);
+  if (q.get("upgraded")) show($("banner"), "Payment received. Welcome to GuestReply Pro!", "ok");
+  if (q.get("payment") === "error") show($("banner"), "We couldn't confirm your payment. If you were charged, please contact us.");
+  if (q.get("canceled")) show($("banner"), "Checkout canceled. You're still on the free plan.", "ok");
+}
+
+$("profile").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.submitter; busy(btn, true, "Saving…");
+  try {
+    await api("/api/profile", { method: "POST", body: JSON.stringify(Object.fromEntries(new FormData(e.target))) });
+    show($("profileMsg"), "Saved. New replies will use this.", "ok");
+  } catch (err) { show($("profileMsg"), err.message); }
+  busy(btn, false);
+});
+
+$("addBox").onclick = () => addBox();
+
+$("reviews").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  hide($("reviewMsg"));
+  const reviews = [...$("boxes").querySelectorAll("textarea")].map((t) => t.value.trim()).filter(Boolean);
+  if (!reviews.length) return show($("reviewMsg"), "Paste at least one review first.");
+  const btn = $("generate");
+  busy(btn, true, `Writing ${reviews.length} ${reviews.length === 1 ? "reply" : "replies"}…`);
+  try {
+    const { results } = await api("/api/replies", { method: "POST", body: JSON.stringify({ reviews }) });
+    $("results").innerHTML = "<h3 style='margin-top:24px'>Your replies</h3>" + results.map(resultHtml).join("");
+    $("boxes").innerHTML = ""; addBox();
+    me.used += results.length; renderPlan(); loadHistory();
+  } catch (err) {
+    show($("reviewMsg"), err.message);
+  }
+  busy(btn, false);
+});
+
+$("insightsBtn").onclick = async () => {
+  const btn = $("insightsBtn"); hide($("insightsMsg"));
+  busy(btn, true, "Reading your reviews…");
+  try {
+    const { report, reviewCount } = await api("/api/insights", { method: "POST" });
+    const list = (items, bad) => (items || []).map((t) => `<div class="theme ${bad ? "bad" : ""}">
+        <span class="count">${esc(t.count)}×</span> <strong>${esc(t.theme)}</strong>
+        ${t.example ? `<q>${esc(t.example)}</q>` : ""}
+        ${t.suggestion ? `<div class="fix"><strong>Try:</strong> ${esc(t.suggestion)}</div>` : ""}
+      </div>`).join("") || '<p class="muted">None found.</p>';
+    $("insights").innerHTML = `<p style="margin:16px 0">${esc(report.summary)}</p>
+      <p class="hint">Based on your last ${reviewCount} reviews.</p>
+      <div class="grid2" style="margin-top:16px">
+        <div><h3>Problems to fix</h3>${list(report.problems, true)}</div>
+        <div><h3>What guests love</h3>${list(report.praise)}</div>
+      </div>`;
+  } catch (err) { show($("insightsMsg"), err.message); }
+  busy(btn, false);
+};
+
+$("logout").onclick = async () => { await fetch("/api/logout", { method: "POST" }); location.href = "/"; };
+
+addBox();
+load().catch((e) => show($("banner"), e.message));
+</script>
+</body>
+</html>
