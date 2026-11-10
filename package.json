@@ -1,0 +1,10 @@
+{
+  "name": "guestreply",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-written replies to guest reviews for restaurants and hotels. Built by Chloe Davis for HM 480.",
+  "dependencies": {
+    "pg": "8.13.1"
+  },
+  "engines": { "node": ">=18" }
+}
